@@ -1,0 +1,16 @@
+.vs/АГС/v15/.suo
+*.db
+*.ipch
+*.pdb
+Debug/Проект1.exe
+*.obj
+*.idb
+*.log
+*.tlog
+*.dll
+*.filters
+*.vcxproj
+*.sln
+*.txt
+Debug/сshader.obj.enc
+ShaderLib.lib
