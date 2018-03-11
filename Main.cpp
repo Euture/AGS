@@ -1,5 +1,6 @@
-#include <windows.h>
+п»ї#include <windows.h>
 #include "stdio.h"
+#include <string>
 
 #include "glew.h"
 #include "GL/freeglut.h"
@@ -8,22 +9,39 @@
 #include <glm/gtc/matrix_transform.hpp>
 #include <glm/gtc/type_ptr.hpp>
 
+#include "glfw3.h"
+
 #include "CShader.h"
+#include "CCamera.h"
 
 using namespace glm;
+using namespace std;
+// РІСЂРµРјСЏ РјРµР¶РґСѓ РІС‹Р·РѕРІР°РјРё simulation
+static GLfloat Simulation_Time_Passed = 0;
+LARGE_INTEGER OldValue, NewValue, Time;
+GLint FPSCounter = 0;
+GLint FPS = 0;
+GLdouble oneSecond = 0;
+string Title;
 
-// используемый шейдер (пока только один)
+// РґРІРёР¶РµРЅРёРµ 
+POINT Last , Now;
+
+// РёСЃРїРѕР»СЊР·СѓРµРјС‹Р№ С€РµР№РґРµСЂ (РїРѕРєР° С‚РѕР»СЊРєРѕ РѕРґРёРЅ)
 CShader		Shader;
 
-// переменные для вывода объекта (прямоугольника из двух треугольников)
-GLuint	VAO_Index = 0;		// индекс VAO-буфера
-GLuint	VBO_Index = 0;		// индекс VBO-буфера
-int		VertexCount = 0;	// количество вершин
+// РєР°РјРµСЂР°
+CCamera Camera;
 
-							// инициализация переменных для вывода объекта
+// РїРµСЂРµРјРµРЅРЅС‹Рµ РґР»СЏ РІС‹РІРѕРґР° РѕР±СЉРµРєС‚Р° (РїСЂСЏРјРѕСѓРіРѕР»СЊРЅРёРєР° РёР· РґРІСѓС… С‚СЂРµСѓРіРѕР»СЊРЅРёРєРѕРІ)
+GLuint	VAO_Index = 0;		// РёРЅРґРµРєСЃ VAO-Р±СѓС„РµСЂР°
+GLuint	VBO_Index = 0;		// РёРЅРґРµРєСЃ VBO-Р±СѓС„РµСЂР°
+int		VertexCount = 0;	// РєРѕР»РёС‡РµСЃС‚РІРѕ РІРµСЂС€РёРЅ
+
+							// РёРЅРёС†РёР°Р»РёР·Р°С†РёСЏ РїРµСЂРµРјРµРЅРЅС‹С… РґР»СЏ РІС‹РІРѕРґР° РѕР±СЉРµРєС‚Р°
 void	InitObject(void) {
 
-	// создание и заполнение VBO
+	// СЃРѕР·РґР°РЅРёРµ Рё Р·Р°РїРѕР»РЅРµРЅРёРµ VBO
 	glGenBuffers(1, &VBO_Index);
 	glBindBuffer(GL_ARRAY_BUFFER, VBO_Index);
 	GLfloat	Verteces[] = {
@@ -36,70 +54,222 @@ void	InitObject(void) {
 	};
 	glBufferData(GL_ARRAY_BUFFER, sizeof(Verteces), Verteces, GL_STATIC_DRAW);
 
-	// создание VAO
+	// СЃРѕР·РґР°РЅРёРµ VAO
 	glGenVertexArrays(1, &VAO_Index);
 	glBindVertexArray(VAO_Index);
-	// заполнение VAO
+	// Р·Р°РїРѕР»РЅРµРЅРёРµ VAO
 	glBindBuffer(GL_ARRAY_BUFFER, VBO_Index);
 	int		k = Shader.GetAttribLocation("vPosition");
 	glVertexAttribPointer(k, 2, GL_FLOAT, GL_FALSE, 0, 0);
 	glEnableVertexAttribArray(k);
-	// "отвязка" буфера VAO, чтоб случайно не испортить
+	// "РѕС‚РІСЏР·РєР°" Р±СѓС„РµСЂР° VAO, С‡С‚РѕР± СЃР»СѓС‡Р°Р№РЅРѕ РЅРµ РёСЃРїРѕСЂС‚РёС‚СЊ
 	glBindVertexArray(0);
 
-	// указание количество вершин
+	// СѓРєР°Р·Р°РЅРёРµ РєРѕР»РёС‡РµСЃС‚РІРѕ РІРµСЂС€РёРЅ
 	VertexCount = 6;
 	return;
 }
 
+void DrawCube(CShader &shader)
+{
+	// РїРµСЂРµРјРµРЅРЅС‹Рµ РґР»СЏ РІС‹РІРѕРґР° РѕР±СЉРµРєС‚Р° (РїСЂСЏРјРѕСѓРіРѕР»СЊРЅРёРєР° РёР· РґРІСѓС… С‚СЂРµСѓРіРѕР»СЊРЅРёРєРѕРІ) 
+	static GLuint VAO_Index = 0; // РёРЅРґРµРєСЃ VAOвЂђР±СѓС„РµСЂР° 
+	static GLuint VBO_Index = 0; // РёРЅРґРµРєСЃ VBOвЂђР±СѓС„РµСЂР° 
+	static int VertexCount = 0; // РєРѕР»РёС‡РµСЃС‚РІРѕ РІРµСЂС€РёРЅ 
+	static bool init = true;
+	if (init)
+	{
+		// СЃРѕР·РґР°РЅРёРµ Рё Р·Р°РїРѕР»РЅРµРЅРёРµ VBO 
+		glGenBuffers(1, &VBO_Index);
+		glBindBuffer(GL_ARRAY_BUFFER, VBO_Index);
+		GLfloat Verteces[] =
+		{
+			// РїРµСЂРµРґРЅСЏСЏ РіСЂР°РЅСЊ 
+			-0.5, +0.5, +0.5,
+			-0.5, -0.5, +0.5,
+			+0.5, +0.5, +0.5,
+			+0.5, +0.5, +0.5,
+			-0.5, -0.5, +0.5,
+			+0.5, -0.5, +0.5,
+			// Р·Р°РґРЅСЏСЏ РіСЂР°РЅСЊ 
+			+0.5, +0.5, -0.5,
+			+0.5, -0.5, -0.5,
+			-0.5, +0.5, -0.5,
+			-0.5, +0.5, -0.5,
+			+0.5, -0.5, -0.5,
+			-0.5, -0.5, -0.5,
+			// РїСЂР°РІР°СЏ РіСЂР°РЅСЊ 
+			+0.5, -0.5, +0.5,
+			+0.5, -0.5, -0.5,
+			+0.5, +0.5, +0.5,
+			+0.5, +0.5, +0.5,
+			+0.5, -0.5, -0.5,
+			+0.5, +0.5, -0.5,
+			// Р»РµРІР°СЏ РіСЂР°РЅСЊ 
+			-0.5, +0.5, +0.5,
+			-0.5, +0.5, -0.5,
+			-0.5, -0.5, +0.5,
+			-0.5, -0.5, +0.5,
+			-0.5, +0.5, -0.5,
+			-0.5, -0.5, -0.5,
+			// РІРµСЂС…РЅСЏСЏ РіСЂР°РЅСЊ 
+			-0.5, +0.5, -0.5,
+			-0.5, +0.5, +0.5,
+			+0.5, +0.5, -0.5,
+			+0.5, +0.5, -0.5,
+			-0.5, +0.5, +0.5,
+			+0.5, +0.5, +0.5,
+			// РЅРёР¶РЅСЏСЏ РіСЂР°РЅСЊ 
+			-0.5, -0.5, +0.5,
+			-0.5, -0.5, -0.5,
+			+0.5, -0.5, +0.5,
+			+0.5, -0.5, +0.5,
+			-0.5, -0.5, -0.5,
+			+0.5, -0.5, -0.5
+		};
+		glBufferData(GL_ARRAY_BUFFER, sizeof(Verteces), Verteces, GL_STATIC_DRAW);
+		// СЃРѕР·РґР°РЅРёРµ VAO 
+		glGenVertexArrays(1, &VAO_Index);
+		glBindVertexArray(VAO_Index);
+		// Р·Р°РїРѕР»РЅРµРЅРёРµ VAO 
+		glBindBuffer(GL_ARRAY_BUFFER, VBO_Index);
+		int k = shader.GetAttribLocation("vPosition");
+		glVertexAttribPointer(k, 3, GL_FLOAT, GL_FALSE, 0, 0);
+		glEnableVertexAttribArray(k);
+		// "РѕС‚РІСЏР·РєР°" Р±СѓС„РµСЂР° VAO, С‡С‚РѕР± СЃР»СѓС‡Р°Р№РЅРѕ РЅРµ РёСЃРїРѕСЂС‚РёС‚СЊ 
+		glBindVertexArray(0);
+		// СѓРєР°Р·Р°РЅРёРµ РєРѕР»РёС‡РµСЃС‚РІРѕ РІРµСЂС€РёРЅ 
+		VertexCount = 36;
+		init = false;
+	}
+	glBindVertexArray(VAO_Index);
+	glDrawArrays(GL_TRIANGLES, 0, VertexCount);
+}
 
-// функция вызывается при перерисовке окна
-// в том числе и принудительно, по командам glutPostRedisplay
+// С„СѓРЅРєС†РёСЏ РІС‹Р·С‹РІР°РµС‚СЃСЏ РїСЂРё РїРµСЂРµСЂРёСЃРѕРІРєРµ РѕРєРЅР°
+// РІ С‚РѕРј С‡РёСЃР»Рµ Рё РїСЂРёРЅСѓРґРёС‚РµР»СЊРЅРѕ, РїРѕ РєРѕРјР°РЅРґР°Рј glutPostRedisplay
 void Display(void)
 {
-	// отчищаем буфер цвета
+	// РѕС‚С‡РёС‰Р°РµРј Р±СѓС„РµСЂ С†РІРµС‚Р°
 	glClearColor(1.0, 1.0, 1.0, 1.0);
 	glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
 	glEnable(GL_DEPTH_TEST);
+	glPolygonMode(GL_FRONT_AND_BACK, GL_LINE);
+	//glEnable(GL_CULL_FACE);
+	glCullFace(GL_BACK);
 
-	// активируем шейдер
+	// Р°РєС‚РёРІРёСЂСѓРµРј С€РµР№РґРµСЂ
 	Shader.Activate();
 
-	// установка uniform-переменных
-	vec4 Offset = vec4(0.5, 0.5, 0.0, 0.0);
-	Shader.SetUniformVec4("Offset", Offset);
-
-	vec4 Color = vec4(1.0, 1.0, 0.0, 1.0);
-	Shader.SetUniformVec4("Color", Color);
-
+	// РїРѕР»СѓС‡Р°РµРј РјР°С‚СЂРёС†Сѓ РїСЂРѕРµРєС†РёРё
+	mat4 ProjectionMatrix = Camera.GetProjectionMatrix();
+	// СѓСЃС‚Р°РЅР°РІР»РёРІР°РµРј РјР°С‚СЂРёС†Сѓ РїСЂРѕРµРєС†РёРё
+	Shader.SetUniformMat4("ProjectionMatrix", ProjectionMatrix);
+	
+	// РїРѕР»СѓС‡Р°РµРј РјР°С‚СЂРёС†Сѓ РЅР°Р±Р»СЋРґРµРЅРёСЏ
+	mat4 ViewMatrix = Camera.GetViewMatrix();
+	
+	// РІС‹РІРѕРґРёРј 1 РјРѕРґРµР»СЊ
+	mat4 ModelMatrix1 = mat4(
+		vec4(1, 0, 0, 0), // РЅР°РїСЂР°РІР»РµРЅРёРµ ox
+		vec4(0, 1, 0, 0), // РЅР°РїСЂР°РІР»РµРЅРёРµ oy
+		vec4(0, 0, 1, 0), // РЅР°РїСЂР°РІР»РµРЅРёРµ oz
+		vec4(3, 0, 0, 1)  // РїРѕР·РёС†РёСЏСЏ РѕР±СЉРµРєС‚Р°
+	);
+	// СѓСЃС‚Р°РЅР°РІР»РёРІР°РµРј РјР°С‚СЂРёС†Сѓ РЅР°Р±Р»СЋРґРµРЅРёСЏ РјРѕРґРµР»Рё
+	mat4 ModelViewMatrix1 = ViewMatrix * ModelMatrix1;
+	Shader.SetUniformMat4("ModelViewMatrix", ModelViewMatrix1);
+	
+	// СѓСЃС‚Р°РЅРѕРІРєР° uniform-РїРµСЂРµРјРµРЅРЅС‹С…
 	vec4 Color1 = vec4(1.0, 0.0, 0.0, 1.0);
-	Shader.SetUniformVec4("Color1", Color1);
+	Shader.SetUniformVec4("Color", Color1);
 
-	// вывод объекта
+	// РІС‹РІРѕРґ РѕР±СЉРµРєС‚Р° 
+	DrawCube(Shader);
+
+	// РІС‹РІРѕРґРёРј 2 РјРѕРґРµР»СЊ
+	mat4 ModelMatrix2 = mat4(
+		vec4(1, 0, 0, 0), // РЅР°РїСЂР°РІР»РµРЅРёРµ ox
+		vec4(0, 1, 0, 0), // РЅР°РїСЂР°РІР»РµРЅРёРµ oy
+		vec4(0, 0, 1, 0), // РЅР°РїСЂР°РІР»РµРЅРёРµ oz
+		vec4(-3, 0, 0, 1)  // РїРѕР·РёС†РёСЏСЏ РѕР±СЉРµРєС‚Р°
+	);
+	// СѓСЃС‚Р°РЅР°РІР»РёРІР°РµРј РјР°С‚СЂРёС†Сѓ РЅР°Р±Р»СЋРґРµРЅРёСЏ РјРѕРґРµР»Рё
+	mat4 ModelViewMatrix2 = ViewMatrix * ModelMatrix2;
+	Shader.SetUniformMat4("ModelViewMatrix", ModelViewMatrix2);
+
+	// СѓСЃС‚Р°РЅРѕРІРєР° uniform-РїРµСЂРµРјРµРЅРЅС‹С…
+	vec4 Color2 = vec4(0.0, 0.0, 1.0, 1.0);
+	Shader.SetUniformVec4("Color", Color2);
+
+	// РІС‹РІРѕРґ РѕР±СЉРµРєС‚Р° 
+	DrawCube(Shader);
+
+	// РІС‹РІРѕРґ РѕР±СЉРµРєС‚Р°
 	glBindVertexArray(VAO_Index);
 	glDrawArrays(GL_TRIANGLES, 0, 6);
 
-	// смена переднего и заднего буферов
+	// СЃРјРµРЅР° РїРµСЂРµРґРЅРµРіРѕ Рё Р·Р°РґРЅРµРіРѕ Р±СѓС„РµСЂРѕРІ
 	glutSwapBuffers();
 };
 
-// функция, вызываемая при изменении размеров окна
+// С„СѓРЅРєС†РёСЏ, РІС‹Р·С‹РІР°РµРјР°СЏ РїСЂРё РёР·РјРµРЅРµРЅРёРё СЂР°Р·РјРµСЂРѕРІ РѕРєРЅР°
 void Reshape(int w, int h)
 {
-	// установить новую область просмотра, равную всей области окна
+	// СѓСЃС‚Р°РЅРѕРІРёС‚СЊ РЅРѕРІСѓСЋ РѕР±Р»Р°СЃС‚СЊ РїСЂРѕСЃРјРѕС‚СЂР°, СЂР°РІРЅСѓСЋ РІСЃРµР№ РѕР±Р»Р°СЃС‚Рё РѕРєРЅР°
 	glViewport(0, 0, (GLsizei)w, (GLsizei)h);
-};
+	// СѓСЃС‚Р°РЅРѕРІРёС‚СЊ РјР°С‚СЂРёС†Сѓ РїСЂРѕРµРєС†РёРё РєР°РјРµСЂС‹
+	Camera.SetProjectionMatrix(45.0, float(w) / h, 1, 100);
+	
+}
 
-// функция вызывается когда процессор простаивает, т.е. максимально часто
+// С„РїСЃ
+void ShowFPS(GLfloat time)
+{
+	oneSecond += time;
+	if (oneSecond < 1)FPSCounter++;
+	else
+	{
+		FPS = FPSCounter;
+		FPSCounter = 0;
+		oneSecond = 0;
+	}
+}
+
+
+// С„СѓРЅРєС†РёСЏ РІС‹Р·С‹РІР°РµС‚СЃСЏ РєРѕРіРґР° РїСЂРѕС†РµСЃСЃРѕСЂ РїСЂРѕСЃС‚Р°РёРІР°РµС‚, С‚.Рµ. РјР°РєСЃРёРјР°Р»СЊРЅРѕ С‡Р°СЃС‚Рѕ
 void Simulation(void)
 {
-	//	ПЕРЕРИСОВАТЬ ОКНО
+	
+	// РїРѕРґСЃС‡РµС‚ С„РїСЃ + title РѕРєРЅР°
+	OldValue = NewValue;
+	QueryPerformanceCounter(&NewValue);
+	QueryPerformanceFrequency(&Time);
+	GLdouble Simulation_Time_Passed = ((GLdouble)NewValue.QuadPart / Time.QuadPart) - ((GLdouble)OldValue.QuadPart / Time.QuadPart);
+	ShowFPS(Simulation_Time_Passed);
+	Title = "Lab #2: [" + to_string(FPS) + "]";
+	glutSetWindowTitle(Title.c_str());
+
+	// РѕРїСЂРµРґРµР»СЏРµРј РЅРµРѕР±С…РѕРґРёРјРѕСЃС‚СЊ РїРµСЂРµРґРІРёР¶РµРЅРёСЏ РєР°РјРµСЂС‹
+	bool CameraLeft = GetAsyncKeyState(VK_LEFT);
+	bool CameraRight = GetAsyncKeyState(VK_RIGHT);
+	bool CameraForward = GetAsyncKeyState(VK_DOWN);
+	bool CameraBackward = GetAsyncKeyState(VK_UP);
+
+	if (CameraLeft || CameraRight || CameraForward || CameraBackward)
+	{
+		Camera.MoveOXZ(CameraLeft, CameraRight, CameraForward, CameraBackward, Simulation_Time_Passed);
+	}
+
+	// РѕРїСЂРµРґРµР»СЏРµРј РЅРµРѕР±С…РѕРґРёРјРѕСЃС‚СЊ РІСЂР°С‰РµРЅРёСЏ
+	bool Mouse = GetAsyncKeyState(VK_RBUTTON);
+	//	РџР•Р Р•Р РРЎРћР’РђРўР¬ РћРљРќРћ
 	glutPostRedisplay();
-};
+}
 
 void InitShaders()
 {
-	// загрузка шейдера
+	// Р·Р°РіСЂСѓР·РєР° С€РµР№РґРµСЂР°
 	Shader.LoadVertexShader("SHADER\\Example.vsh");
 	Shader.LoadFragmentShader("SHADER\\Example.fsh");
 	Shader.Link();
@@ -107,44 +277,43 @@ void InitShaders()
 
 void main(int argc, char **argv)
 {
-	// инициализация библиотеки GLUT
+	// РёРЅРёС†РёР°Р»РёР·Р°С†РёСЏ Р±РёР±Р»РёРѕС‚РµРєРё GLUT
 	glutInit(&argc, argv);
-	// инициализация дисплея (формат вывода)
+	// РёРЅРёС†РёР°Р»РёР·Р°С†РёСЏ РґРёСЃРїР»РµСЏ (С„РѕСЂРјР°С‚ РІС‹РІРѕРґР°)
 	glutInitDisplayMode(GLUT_RGBA | GLUT_DOUBLE | GLUT_DEPTH | GLUT_STENCIL | GLUT_MULTISAMPLE);
-	// требования к версии OpenGL (версия 3.3 без поддержки обратной совместимости)
+	// С‚СЂРµР±РѕРІР°РЅРёСЏ Рє РІРµСЂСЃРёРё OpenGL (РІРµСЂСЃРёСЏ 3.3 Р±РµР· РїРѕРґРґРµСЂР¶РєРё РѕР±СЂР°С‚РЅРѕР№ СЃРѕРІРјРµСЃС‚РёРјРѕСЃС‚Рё)
 	glutInitContextVersion(4,4);
 	glutInitContextProfile(GLUT_CORE_PROFILE);
-	// устанавливаем верхний левый угол окна
+	// СѓСЃС‚Р°РЅР°РІР»РёРІР°РµРј РІРµСЂС…РЅРёР№ Р»РµРІС‹Р№ СѓРіРѕР» РѕРєРЅР°
 	glutInitWindowPosition(300, 100);
-	// устанавливаем размер окна
+	// СѓСЃС‚Р°РЅР°РІР»РёРІР°РµРј СЂР°Р·РјРµСЂ РѕРєРЅР°
 	glutInitWindowSize(800, 600);
-	// создание окна
-	glutCreateWindow("laba_01");
+	// СЃРѕР·РґР°РЅРёРµ РѕРєРЅР°
+	glutCreateWindow("Lab #2");
 
-	//	инициализация GLEW 
+	//	РёРЅРёС†РёР°Р»РёР·Р°С†РёСЏ GLEW 
 	GLenum err = glewInit();
 	if (GLEW_OK != err)
 	{
 		fprintf(stderr, "Glew error: %s\n", glewGetErrorString(err));
 		return;
 	}
-	// определение текущей версии OpenGL
+	// РѕРїСЂРµРґРµР»РµРЅРёРµ С‚РµРєСѓС‰РµР№ РІРµСЂСЃРёРё OpenGL
 	printf("OpenGL Version = %s\n\n", glGetString(GL_VERSION));
 
-	//инициализация шейдеров
+	//РёРЅРёС†РёР°Р»РёР·Р°С†РёСЏ С€РµР№РґРµСЂРѕРІ
 	InitShaders();
 	
-	// инициализация объекта для вывода
-	InitObject();
+	// РёРЅРёС†РёР°Р»РёР·Р°С†РёСЏ РѕР±СЉРµРєС‚Р° РґР»СЏ РІС‹РІРѕРґР°
+	//InitObject();
 
-	// устанавливаем функцию, которая будет вызываться для перерисовки окна
+	// СѓСЃС‚Р°РЅР°РІР»РёРІР°РµРј С„СѓРЅРєС†РёСЋ, РєРѕС‚РѕСЂР°СЏ Р±СѓРґРµС‚ РІС‹Р·С‹РІР°С‚СЊСЃСЏ РґР»СЏ РїРµСЂРµСЂРёСЃРѕРІРєРё РѕРєРЅР°
 	glutDisplayFunc(Display);
-	// устанавливаем функцию, которая будет вызываться при изменении размеров окна
+	// СѓСЃС‚Р°РЅР°РІР»РёРІР°РµРј С„СѓРЅРєС†РёСЋ, РєРѕС‚РѕСЂР°СЏ Р±СѓРґРµС‚ РІС‹Р·С‹РІР°С‚СЊСЃСЏ РїСЂРё РёР·РјРµРЅРµРЅРёРё СЂР°Р·РјРµСЂРѕРІ РѕРєРЅР°
 	glutReshapeFunc(Reshape);
-	// устанавливаем функцию которая вызывается всякий раз, когда процессор простаивает
+	// СѓСЃС‚Р°РЅР°РІР»РёРІР°РµРј С„СѓРЅРєС†РёСЋ РєРѕС‚РѕСЂР°СЏ РІС‹Р·С‹РІР°РµС‚СЃСЏ РІСЃСЏРєРёР№ СЂР°Р·, РєРѕРіРґР° РїСЂРѕС†РµСЃСЃРѕСЂ РїСЂРѕСЃС‚Р°РёРІР°РµС‚
 	glutIdleFunc(Simulation);
-	// основной цикл обработки сообщений ОС
+	// РѕСЃРЅРѕРІРЅРѕР№ С†РёРєР» РѕР±СЂР°Р±РѕС‚РєРё СЃРѕРѕР±С‰РµРЅРёР№ РћРЎ
 	glutMainLoop();
 	return;
 };
-

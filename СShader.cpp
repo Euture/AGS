@@ -121,3 +121,21 @@ void CShader::Deactivate()
 {
 	glUseProgram(0);
 }
+
+void CShader::SetUniformVec4(string str, vec4 &value)
+{
+	int	k = glGetUniformLocation(Program, str.c_str());
+	if (k < 0) return;
+	glUseProgram(Program);
+	glUniform4fv(k, 1, value_ptr(value));
+	UniformId.insert(pair<string, int>(str, k));
+}
+
+void CShader::SetUniformMat4(string str, mat4 &value)
+{
+	int	k = glGetUniformLocation(Program, str.c_str());
+	if (k < 0) return;
+	glUseProgram(Program);
+	glUniformMatrix4fv(k, 1, GL_FALSE, value_ptr(value));
+	UniformId.insert(pair<string, int>(str, k));
+}

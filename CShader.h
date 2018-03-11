@@ -9,6 +9,7 @@
 #include <glm/glm.hpp>
 #include <glm/gtc/matrix_transform.hpp>
 #include <glm/gtc/type_ptr.hpp>
+#include <map>
 
 using namespace glm;
 using namespace std;
@@ -30,7 +31,8 @@ private:
 	GLuint	Program;
 
 public:
-
+	// карта uniform переменная-индекс 
+	map <string, int> UniformId;
 	// загрузить вершинный шейдер
 	int LoadVertexShader (char *VertexFileName, bool DebugOutput = true);
 	// загрузить фрагментный шейдер
@@ -52,11 +54,8 @@ public:
 	char ** ReadF(char *FileName);
 
 	// запись вектора из 4-х комопнент в uniform-переменную
-	void SetUniformVec4	(char *name, vec4 value)
-	{
-		int	k = glGetUniformLocation (Program, name);
-		if (k < 0) return;
-		glUseProgram (Program);
-		glUniform4fv (k, 1, value_ptr(value));
-	}
+	void SetUniformVec4(string str, vec4 &value);
+
+	// запись вектора из 4-х комопнент в uniform-переменную
+	void SetUniformMat4(string str, mat4 &value);
 };
