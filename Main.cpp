@@ -25,7 +25,7 @@ GLdouble oneSecond = 0;
 string Title;
 
 // движение 
-POINT Last , Now;
+POINT Now;
 
 // используемый шейдер (пока только один)
 CShader		Shader;
@@ -220,7 +220,6 @@ void Reshape(int w, int h)
 	glViewport(0, 0, (GLsizei)w, (GLsizei)h);
 	// установить матрицу проекции камеры
 	Camera.SetProjectionMatrix(45.0, float(w) / h, 1, 100);
-	
 }
 
 // фпс
@@ -262,9 +261,26 @@ void Simulation(void)
 	}
 
 	// определяем необходимость вращения
-	bool Mouse = GetAsyncKeyState(VK_RBUTTON);
+	bool RMouse = GetAsyncKeyState(VK_RBUTTON);
+	if (RMouse)
+	{	
+		GetCursorPos(&Now);
+		Camera.Rotate(Now.x, Now.y, Simulation_Time_Passed);
+	}
+	else
+	{
+		Camera.firstMouse = true;
+	}
+
 	//	ПЕРЕРИСОВАТЬ ОКНО
 	glutPostRedisplay();
+}
+
+//scrool колесиком мыши
+void MouseWheel(int wheel, int direction, int x, int y)
+{
+	float delta = direction;
+	Camera.Zoom(delta);
 }
 
 void InitShaders()
@@ -303,9 +319,6 @@ void main(int argc, char **argv)
 
 	//инициализация шейдеров
 	InitShaders();
-	
-	// инициализация объекта для вывода
-	//InitObject();
 
 	// устанавливаем функцию, которая будет вызываться для перерисовки окна
 	glutDisplayFunc(Display);
@@ -313,6 +326,8 @@ void main(int argc, char **argv)
 	glutReshapeFunc(Reshape);
 	// устанавливаем функцию которая вызывается всякий раз, когда процессор простаивает
 	glutIdleFunc(Simulation);
+	//  устанавливаем функцию которая вызывается всякий раз, крутят scrool
+	glutMouseWheelFunc(MouseWheel);
 	// основной цикл обработки сообщений ОС
 	glutMainLoop();
 	return;

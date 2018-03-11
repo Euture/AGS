@@ -7,8 +7,7 @@ CCamera::CCamera(void)
 	if (!fin.is_open())
 	{
 		cout << "file not open";
-		eye = vec3(10.1f, 10.1f, 5.1f);
-		vec3 cameraFront = glm::vec3(-1.0f, -1.0f, -1.0f);
+		eye = vec3(0.1f, 0.1f, 0.1f);
 		at = eye + cameraFront;
 		up = vec3(0.0f, 1.0f, 0.0f);
 	}
@@ -66,6 +65,10 @@ CCamera::~CCamera(void)
 //установка матрицы проекции
 void CCamera::SetProjectionMatrix(float fovy, float aspect, float zNear, float zFar)
 {
+	Fovy = fovy;
+	Aspect = aspect;
+	ZNear = zNear;
+	ZFar = zFar;
 	ProjectionMatrix = perspective(
 									radians(fovy),
 									aspect,
@@ -90,7 +93,6 @@ mat4 CCamera::GetViewMatrix(void)
 void CCamera::MoveOXZ(bool CameraLeft, bool CameraRight,
 						bool CameraForward, bool CameraBackward,float Simulation_Time_Passed)
 {
-	vec3 cameraFront = glm::vec3(-1.0f, -1.0f, -1.0f);
 	if (CameraBackward)
 		eye += cameraSpeed * cameraFront * Simulation_Time_Passed;
 	if (CameraForward)
@@ -101,26 +103,53 @@ void CCamera::MoveOXZ(bool CameraLeft, bool CameraRight,
 		eye += glm::normalize(glm::cross(cameraFront, up)) * cameraSpeed * Simulation_Time_Passed;
 	at = eye + cameraFront;
 	ViewMatrix = lookAt(eye, at, up);
+	SavePos();
 }
 
 //вращения в горизонтальной и вертикальной плоскости 
-void CCamera::Rotate(float dHorizAngle, float dVertAngle)
+void CCamera::Rotate(float Xpos, float Ypos, float Simulation_Time_Passed)
 {
-	vec3 direction(
-		cos(dVertAngle) * sin(dHorizAngle),
-		sin(dVertAngle),
-		cos(dVertAngle) * cos(dHorizAngle)
-	);
-	vec3 right = vec3(
-		sin(dHorizAngle - 3.14f / 2.0f),
-		0,
-		cos(dHorizAngle - 3.14f / 2.0f)
-	);
-	vec3 up = cross(right, direction);
-	at = eye + direction;
-	ViewMatrix = lookAt(
-		eye,
-		eye + direction,
-		up
-	);
+	if (firstMouse)
+	{
+		lastX = Xpos;
+		lastY = Ypos;
+		firstMouse = false;
+	}
+	else
+	{
+		GLfloat xoffset = Xpos - lastX;
+		GLfloat yoffset = lastY - Ypos;
+		lastX = Xpos;
+		lastY = Ypos;
+
+		GLfloat sensitivity = 10 * Simulation_Time_Passed;
+		xoffset *= sensitivity;
+		yoffset *= sensitivity;
+
+		//вертикаль
+		if (((pitch + yoffset) < 85) && ((pitch + yoffset) > -85))
+		{
+			pitch += yoffset;
+		}
+		//горизонт
+		yaw += xoffset;
+
+		vec3 front;
+		front.x = cos(radians(yaw)) * cos(radians(pitch));
+		front.y = sin(radians(pitch));
+		front.z = sin(radians(yaw)) * cos(radians(pitch));
+		cameraFront = normalize(front);
+		at = eye + cameraFront;
+		ViewMatrix = lookAt(eye, at, up);
+		SavePos();
+	}
+
+	
+}
+
+//изменение fovy
+void CCamera::Zoom(float dFovy)
+{
+	Fovy -= dFovy;
+	SetProjectionMatrix(Fovy, Aspect, ZNear, ZFar);
 }
