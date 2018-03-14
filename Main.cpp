@@ -25,7 +25,7 @@ GLdouble oneSecond = 0;
 string Title;
 
 // движение 
-POINT Now;
+POINT Now, Old;
 
 // используемый шейдер (пока только один)
 CShader		Shader;
@@ -257,7 +257,9 @@ void Simulation(void)
 
 	if (CameraLeft || CameraRight || CameraForward || CameraBackward)
 	{
-		Camera.MoveOXZ(CameraLeft, CameraRight, CameraForward, CameraBackward, Simulation_Time_Passed);
+		float dForward = (int(CameraForward) - int(CameraBackward)) * Simulation_Time_Passed;
+		float dRigth = (int(CameraRight) - int(CameraLeft)) * Simulation_Time_Passed;
+		Camera.MoveOXZ(dForward, dRigth);
 	}
 
 	// определяем необходимость вращения
@@ -265,13 +267,11 @@ void Simulation(void)
 	if (RMouse)
 	{	
 		GetCursorPos(&Now);
-		Camera.Rotate(Now.x, Now.y, Simulation_Time_Passed);
+		float dHorizAngle = Old.x - Now.x;
+		float dVertAngle = Old.y - Now.y;
+		Old = Now;
+		Camera.Rotate(dHorizAngle, dVertAngle);
 	}
-	else
-	{
-		Camera.firstMouse = true;
-	}
-
 	//	ПЕРЕРИСОВАТЬ ОКНО
 	glutPostRedisplay();
 }

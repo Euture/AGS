@@ -7,51 +7,37 @@ CCamera::CCamera(void)
 	if (!fin.is_open())
 	{
 		cout << "file not open" << endl;
-		eye = vec3(0.1f, 0.1f, 0.1f);
-		at = eye + cameraFront;
-		up = vec3(0.0f, 1.0f, 0.0f);
+		Radius = 30;
+		Theta = radians(5.0);
+		Fi = 0;
+		Center = vec3(0, 0, 0);
 	}
 	else
 	{
-		GLfloat x, y, z;
-
-		fin >> x;
-		fin >> y;
-		fin >> z;
-		eye = vec3(x, y, z);
-
-		fin >> x;
-		fin >> y;
-		fin >> z;
-		at = vec3(x, y, z);
-
-		fin >> x;
-		fin >> y;
-		fin >> z;
-		up = vec3(x, y, z);
-
+		fin >> Radius >> Theta >> Fi >> Center.x >> Center.y >> Center.z;
 		fin.close();
 	}
-	ViewMatrix = lookAt(eye, at, up);
+	Eye.x = Radius * sin(Theta)* cos(Fi);
+	Eye.y = Radius * cos(Theta);
+	Eye.z = Radius * sin(Theta)* sin(Fi);
+	Up = vec3(0, 1, 0);
+
+	ViewMatrix = lookAt(Eye + Center, Center, Up);
 	SavePos();
 }
-  
-// сохраняет позицию камеры
+
+//сохранение позиции камеры
 void CCamera::SavePos(void)
 {
 	ofstream fout("Position.txt");
 
-	fout << eye.x << " ";
-	fout << eye.y << " ";
-	fout << eye.z << " ";
-
-	fout << at.x << " ";
-	fout << at.y << " ";
-	fout << at.z << " ";
-
-	fout << up.x << " ";
-	fout << up.y << " ";
-	fout << up.z << " ";
+	fout << Radius << ' '
+		<< Theta << ' '
+		<< Fi << ' '
+		<< Center.x << ' '
+		<< Center.y << ' '
+		<< Center.z;
+	fout.close();
 
 	fout.close();
 }
@@ -65,16 +51,12 @@ CCamera::~CCamera(void)
 //установка матрицы проекции
 void CCamera::SetProjectionMatrix(float fovy, float aspect, float zNear, float zFar)
 {
-	Fovy = fovy;
-	Aspect = aspect;
-	ZNear = zNear;
-	ZFar = zFar;
 	ProjectionMatrix = perspective(
-									radians(fovy),
-									aspect,
-									zNear,
-									zFar
-								 );
+		radians(fovy),
+		aspect,
+		zNear,
+		zFar
+	);
 }
 
 //получение матрицы проекции
@@ -83,73 +65,59 @@ mat4 CCamera::GetProjectionMatrix(void)
 	return ProjectionMatrix;
 }
 
-//получить матрицу камеры (наблюдения)
+//получить матрицу наблюдения
 mat4 CCamera::GetViewMatrix(void)
 {
 	return ViewMatrix;
 }
 
-//передвинуть камеру и точку налюдения в горизонтальной плоскости oXZ
-void CCamera::MoveOXZ(bool CameraLeft, bool CameraRight,
-						bool CameraForward, bool CameraBackward,float Simulation_Time_Passed)
+//передвижение в oXZ
+void CCamera::MoveOXZ(float dForward, float dRight)
 {
-	if (CameraBackward)
-		eye += cameraSpeed * cameraFront * Simulation_Time_Passed;
-	if (CameraForward)
-		eye -= cameraSpeed * cameraFront * Simulation_Time_Passed;
-	if (CameraLeft)
-		eye -= glm::normalize(glm::cross(cameraFront, up)) * cameraSpeed * Simulation_Time_Passed;
-	if (CameraRight)
-		eye += glm::normalize(glm::cross(cameraFront, up)) * cameraSpeed * Simulation_Time_Passed;
-	at = eye + cameraFront;
-	ViewMatrix = lookAt(eye, at, up);
+	dForward = dForward * Speed;
+	dRight = dRight * Speed;
+	cout << dForward << dRight << endl;
+	vec3 VForward = normalize(-Eye);
+
+	vec3 DeltaF = vec3(VForward.x * dForward, 0, VForward.z * dForward);
+
+	vec3 DeltaR = normalize(cross(VForward, Up));
+	DeltaR = vec3(DeltaR.x * dRight, 0, DeltaR.z * dRight);
+
+	Center = Center + DeltaF + DeltaR;
+
+	ViewMatrix = lookAt(Eye + Center, Center, Up);
 	SavePos();
 }
 
-//вращения в горизонтальной и вертикальной плоскости 
-void CCamera::Rotate(float Xpos, float Ypos, float Simulation_Time_Passed)
+//вращение в вертикальной и горизонтальной плоскости
+void CCamera::Rotate(float dHorizAngle, float dVertAngle)
 {
-	if (firstMouse)
-	{
-		lastX = Xpos;
-		lastY = Ypos;
-		firstMouse = false;
-	}
-	else
-	{
-		GLfloat xoffset = Xpos - lastX;
-		GLfloat yoffset = lastY - Ypos;
-		lastX = Xpos;
-		lastY = Ypos;
+	if ((dVertAngle > 0) & (Theta < Max_Theta)) Theta += dVertAngle / 360;
+	if ((dVertAngle < 0) & (Theta > Min_Theta)) Theta += dVertAngle / 360;
 
-		GLfloat sensitivity = 12 * Simulation_Time_Passed;
-		xoffset *= sensitivity ;
-		yoffset *= sensitivity;
+	Fi += dHorizAngle / 360;
+	if (Fi > 2 * PI) Fi -= 2 * PI;
+	if (Fi < 0) Fi += 2 * PI;
 
-		//вертикаль
-		if (((pitch + yoffset) < 85) && ((pitch + yoffset) > -85))
-		{
-			pitch += yoffset;
-		}
-		//горизонт
-		yaw += xoffset;
+	if (Theta < Min_Theta) Theta = Min_Theta;
+	if (Theta > Max_Theta) Theta = Max_Theta;
 
-		vec3 front;
-		front.x = cos(radians(yaw)) * cos(radians(pitch));
-		front.y = sin(radians(pitch));
-		front.z = sin(radians(yaw)) * cos(radians(pitch));
-		cameraFront = normalize(front);
-		at = eye + cameraFront;
-		ViewMatrix = lookAt(eye, at, up);
-		SavePos();
-	}
-
-	
+	Eye.x = Radius * sin(Theta) * cos(Fi);
+	Eye.y = Radius * cos(Theta);
+	Eye.z = Radius * sin(Theta) * sin(Fi);
+	ViewMatrix = lookAt(Eye + Center, Center, Up);
+	SavePos();
 }
 
-//изменение fovy
-void CCamera::Zoom(float dFovy)
+//изменение радиуса
+void CCamera::Zoom(float dR)
 {
-	Fovy -= dFovy;
-	SetProjectionMatrix(Fovy, Aspect, ZNear, ZFar);
+	if ((0 > dR) & (Radius < 50)) Radius = Radius - dR;
+	if ((0 < dR) & (Radius > 4)) Radius = Radius - dR;
+	Eye.x = Radius * sin(Theta) * cos(Fi);
+	Eye.y = Radius * cos(Theta);
+	Eye.z = Radius * sin(Theta) * sin(Fi);
+	ViewMatrix = lookAt(Eye + Center, Center, Up);
+	SavePos();
 }

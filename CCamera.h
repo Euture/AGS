@@ -1,4 +1,4 @@
-#pragma once
+п»ї#pragma once
 #include <windows.h>
 #include "stdio.h"
 #include "glew.h"
@@ -13,66 +13,53 @@
 using namespace glm;
 using namespace std;
 
-//классдля работы с камерой
+const float PI = 3.14;
+const float Max_Theta = radians(85.0);
+const float Min_Theta = radians(5.0);
+
+//РєР»Р°СЃСЃРґР»СЏ СЂР°Р±РѕС‚С‹ СЃ РєР°РјРµСЂРѕР№
 class CCamera
 {
-	//вектора для ViewMatrix
-	vec3 eye;
-	vec3 at;
-	vec3 up;
+	//РІРµРєС‚РѕСЂР° РґР»СЏ ViewMatrix
+	vec3 Eye;
+	vec3 Center;
+	vec3 Up;
 
-	//скорость камеры
-	GLfloat cameraSpeed = 1;
+	float Radius;
+	float Fi;
+	float Theta;
+	float Speed = 5.0;
 
-	//чтобы камера всегда смотрела на at
-	vec3 cameraFront = vec3(-1.0f, 0.0f, -1.0f);
-
-	//координаты мишы
-	GLfloat lastX;
-	GLfloat lastY;
-
-	//горизонт
-	GLfloat yaw = -90.0f;
-	//вертикаль
-	GLfloat pitch = 5.1f;
-
-	//данные для перспективы
-	GLfloat Fovy;
-	GLfloat Aspect;
-	GLfloat ZNear;
-	GLfloat ZFar;
-
-	//матрица наблюдения
+	//РјР°С‚СЂРёС†Р° РЅР°Р±Р»СЋРґРµРЅРёСЏ
 	mat4 ViewMatrix;
-	//матрица проекции
+	//РјР°С‚СЂРёС†Р° РїСЂРѕРµРєС†РёРё
 	mat4 ProjectionMatrix;
 
 public:
-	//конструктор по умолчанию
+	//РєРѕРЅСЃС‚СЂСѓРєС‚РѕСЂ РїРѕ СѓРјРѕР»С‡Р°РЅРёСЋ
 	CCamera(void);
-	//деструктор
+	//РґРµСЃС‚СЂСѓРєС‚РѕСЂ
 	~CCamera(void);
 
-	//сохраняет позицию камеры в файл
+	//СЃРѕС…СЂР°РЅСЏРµС‚ РїРѕР·РёС†РёСЋ РєР°РјРµСЂС‹ РІ С„Р°Р№Р»
 	void SavePos(void);
 
-	//установка матрицы проекции
+	//СѓСЃС‚Р°РЅРѕРІРєР° РјР°С‚СЂРёС†С‹ РїСЂРѕРµРєС†РёРё
 	void SetProjectionMatrix(float fovy, float aspect, float zNear, float zFar);
-	//получение матрицы проекции
+	//РїРѕР»СѓС‡РµРЅРёРµ РјР°С‚СЂРёС†С‹ РїСЂРѕРµРєС†РёРё
 	mat4 GetProjectionMatrix(void);
 
-	//получить матрицу камеры (наблюдения)
+	//РїРѕР»СѓС‡РёС‚СЊ РјР°С‚СЂРёС†Сѓ РєР°РјРµСЂС‹ (РЅР°Р±Р»СЋРґРµРЅРёСЏ)
 	mat4 GetViewMatrix(void);
 
-	//передвинуть камеру и точку налюдения в горизонтальной плоскости oXZ
-	void MoveOXZ(bool CameraLeft, bool CameraRight,
-				 bool CameraForward, bool CameraBackward, float Simulation_Time_Passed);
+	//РїРµСЂРµРґРІРёРЅСѓС‚СЊ РєР°РјРµСЂСѓ Рё С‚РѕС‡РєСѓ РЅР°Р»СЋРґРµРЅРёСЏ РІ РіРѕСЂРёР·РѕРЅС‚Р°Р»СЊРЅРѕР№ РїР»РѕСЃРєРѕСЃС‚Рё oXZ
+	void MoveOXZ(float dForward, float dRight);
 
-	//для корректной работы мышки при нажатии правой кнопки
+	//РґР»СЏ РєРѕСЂСЂРµРєС‚РЅРѕР№ СЂР°Р±РѕС‚С‹ РјС‹С€РєРё РїСЂРё РЅР°Р¶Р°С‚РёРё РїСЂР°РІРѕР№ РєРЅРѕРїРєРё
 	bool firstMouse = true;
-	//вращения в горизонтальной и вертикальной плоскости 
-	void Rotate(float Xpos, float Ypos, float Simulation_Time_Passed);
+	//РІСЂР°С‰РµРЅРёСЏ РІ РіРѕСЂРёР·РѕРЅС‚Р°Р»СЊРЅРѕР№ Рё РІРµСЂС‚РёРєР°Р»СЊРЅРѕР№ РїР»РѕСЃРєРѕСЃС‚Рё 
+	void Rotate(float dHorizAngle, float dVertAngle);
 
-	//изменение fovy
-	void Zoom(float dFovy);
+	//РёР·РјРµРЅРµРЅРёРµ fovy
+	void Zoom(float dR);
 };
