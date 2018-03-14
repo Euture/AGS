@@ -76,7 +76,7 @@ void CCamera::MoveOXZ(float dForward, float dRight)
 {
 	dForward = dForward * Speed;
 	dRight = dRight * Speed;
-	cout << dForward << dRight << endl;
+
 	vec3 VForward = normalize(-Eye);
 
 	vec3 DeltaF = vec3(VForward.x * dForward, 0, VForward.z * dForward);
