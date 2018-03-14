@@ -139,3 +139,18 @@ void CShader::SetUniformMat4(string str, mat4 &value)
 	glUniformMatrix4fv(k, 1, GL_FALSE, value_ptr(value));
 	UniformId.insert(pair<string, int>(str, k));
 }
+
+int CShader::GetUniformId(const string &name)
+{
+	auto fi = UniformId.find(name);
+	if (fi != UniformId.end())
+	{
+		cout << "Ёлемент найден" << endl;
+		cout << "«начение равно = " << fi->second << endl;
+	}
+	else
+	{
+		cout << "Ёлемент не найден" << endl;
+	}
+	return fi->second;
+}

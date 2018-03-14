@@ -55,7 +55,8 @@ public:
 
 	// запись вектора из 4-х комопнент в uniform-переменную
 	void SetUniformVec4(string str, vec4 &value);
-
 	// запись вектора из 4-х комопнент в uniform-переменную
 	void SetUniformMat4(string str, mat4 &value);
+	// вернуть id uniform переменной
+	int GetUniformId(const string &name);
 };

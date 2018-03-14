@@ -6,7 +6,7 @@ CCamera::CCamera(void)
 	ifstream fin("Position.txt");
 	if (!fin.is_open())
 	{
-		cout << "file not open";
+		cout << "file not open" << endl;
 		eye = vec3(0.1f, 0.1f, 0.1f);
 		at = eye + cameraFront;
 		up = vec3(0.0f, 1.0f, 0.0f);
@@ -122,8 +122,8 @@ void CCamera::Rotate(float Xpos, float Ypos, float Simulation_Time_Passed)
 		lastX = Xpos;
 		lastY = Ypos;
 
-		GLfloat sensitivity = 10 * Simulation_Time_Passed;
-		xoffset *= sensitivity;
+		GLfloat sensitivity = 12 * Simulation_Time_Passed;
+		xoffset *= sensitivity ;
 		yoffset *= sensitivity;
 
 		//вертикаль
