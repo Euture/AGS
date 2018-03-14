@@ -28,7 +28,7 @@ class CCamera
 	float Radius;
 	float Fi;
 	float Theta;
-	float Speed = 5.0;
+	float Speed = 2.0;
 
 	//матрица наблюдения
 	mat4 ViewMatrix;
