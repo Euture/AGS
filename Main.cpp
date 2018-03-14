@@ -258,8 +258,8 @@ void Simulation(void)
 
 	if (CameraLeft || CameraRight || CameraForward || CameraBackward)
 	{
-		float dForward = (int(CameraForward) - int(CameraBackward)) * Simulation_Time_Passed;
-		float dRigth = (int(CameraRight) - int(CameraLeft)) * Simulation_Time_Passed;
+		float dForward = (CameraBackward - CameraForward)  * Simulation_Time_Passed;
+		float dRigth = (CameraRight - CameraLeft) * Simulation_Time_Passed;
 		Camera.MoveOXZ(dForward, dRigth);
 	}
 

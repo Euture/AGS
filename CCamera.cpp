@@ -7,8 +7,8 @@ CCamera::CCamera(void)
 	if (!fin.is_open())
 	{
 		cout << "file not open" << endl;
-		Radius = 30;
-		Theta = radians(5.0);
+		Radius = 20;
+		Theta = radians(10.0);
 		Fi = 0;
 		Center = vec3(0, 0, 0);
 	}

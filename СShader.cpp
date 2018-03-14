@@ -146,7 +146,7 @@ int CShader::GetUniformId(const string &name)
 	if (fi != UniformId.end())
 	{
 		cout << "Ёлемент найден" << endl;
-		cout << "«начение равно = " << fi->second << endl;
+		cout << "Id " << name << " = " << fi->second << endl;
 	}
 	else
 	{
