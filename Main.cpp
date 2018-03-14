@@ -26,6 +26,7 @@ string Title;
 
 // движение 
 POINT Now, Old;
+bool FirstMouse = true;
 
 // используемый шейдер (пока только один)
 CShader		Shader;
@@ -267,10 +268,19 @@ void Simulation(void)
 	if (RMouse)
 	{	
 		GetCursorPos(&Now);
+		if (FirstMouse)
+		{
+			Old = Now;
+			FirstMouse = false;
+		}
 		float dHorizAngle = Old.x - Now.x;
 		float dVertAngle = Old.y - Now.y;
 		Old = Now;
 		Camera.Rotate(dHorizAngle, dVertAngle);
+	}
+	else
+	{
+		FirstMouse = true;
 	}
 	//	ПЕРЕРИСОВАТЬ ОКНО
 	glutPostRedisplay();
